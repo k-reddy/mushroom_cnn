@@ -63,10 +63,10 @@ class MushroomClassifier(nn.Module):
         super().__init__()
 
         self.initial = nn.Sequential(
-            ConvBlock(3, 32, stride=1), ConvBlock(32, 32, stride=2)
+            ConvBlock(3, 32, stride=1), ConvBlock(32, 32, stride=1)
         )
 
-        self.block1 = ResBlock(32, 64, stride=2)
+        self.block1 = ResBlock(32, 64, stride=1)
         self.block2 = ResBlock(64, 128, stride=2)
         self.dropout1 = nn.Dropout(0.2)
         self.block3 = ResBlock(128, 256, stride=2, dilation=2)
