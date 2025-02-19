@@ -130,6 +130,8 @@ class MushroomClassifier(nn.Module):
         self.max_pool = nn.AdaptiveMaxPool2d(1)
         self.dropout3 = nn.Dropout(0.2)
         self.fc = nn.Linear(256 * 2, num_classes)
+        n_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        print(f"created model with {n_params} parameters")
 
     def forward(self, x):
         # Store intermediate results to avoid in-place operations
