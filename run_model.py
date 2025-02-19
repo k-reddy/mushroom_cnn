@@ -7,16 +7,18 @@ from trainer import MushroomTrainer
 
 
 def main():
-    # important to keep seed same if you're loading datasets
+    # important to keep seed same if you're loading a model so there's no data
+    # leakage
     SEED = 81
     random.seed(SEED)
     torch.manual_seed(SEED)
+    # uncomment this section for the first run to download the data from kaggle
     # BASE_DIR = kagglehub.dataset_download("maysee/mushrooms-classification-common-genuss-images")
     # print("Path to dataset files:", path)
     base_dir = "/Users/keerthireddy/.cache/kagglehub/datasets/maysee/mushrooms-classification-common-genuss-images/versions/1/Mushrooms"
 
     print("creating data lists")
-    train_data, val_data, test_data, labels = create_data_lists(base_dir)
+    train_data, val_data, test_data, labels = create_data_lists(base_dir, SEED)
     num_classes = len({data["genus"] for data in train_data})
 
     print("creating dataloaders")
@@ -25,7 +27,6 @@ def main():
     test_dataloader = make_dataloader(test_data)
 
     print("making neural net and trainer")
-
     shroom_classifier = MushroomClassifier(num_classes)
     shroom_trainer = MushroomTrainer(
         shroom_classifier,

@@ -9,6 +9,9 @@ from torch.utils.data import DataLoader
 
 
 def load_images(base_dir, rgb_only=True):
+    """
+    loads mushroom images, skipping any invalid ones
+    """
     images = []
     for genus_folder in os.listdir(base_dir):
         genus_path = os.path.join(base_dir, genus_folder)
@@ -34,6 +37,14 @@ def load_images(base_dir, rgb_only=True):
 
 
 def encode_labels(images):
+    """
+    takes a list of dictionaries that each have key genus
+    and encodes those genera as numbers
+
+    returns the list of data with a new encoded_genus key
+    as well as the labels ordered as they were encoded
+    for future decoding
+    """
     label_encoder = LabelEncoder()
     genera = [data["genus"] for data in images]
     label_encoder.fit(genera)
@@ -43,7 +54,20 @@ def encode_labels(images):
     return images, label_encoder.classes_
 
 
-def split_data(data_list, train_size=0.7, val_pct_of_remaining=0.5, random_state=42):
+def split_data(
+    data_list,
+    random_state,
+    train_size=0.7,
+    val_pct_of_remaining=0.5,
+):
+    """
+    splits data:
+      - train_size * num_samples as training dataset
+      - (1-train_size)*val_pct_of_remaining * num_samples as validation dataset
+      - remaining samples as test dataset
+
+    returns training data, validation data, test data
+    """
     # Get genera for stratification
     genera = [item["genus"] for item in data_list]
 
@@ -68,6 +92,11 @@ def split_data(data_list, train_size=0.7, val_pct_of_remaining=0.5, random_state
 
 
 def make_dataloader(data_list, num_augmentations=0, num_workers=1):
+    """
+    takes a list of data and makes a dataloader
+    num_augmentations specifies how many copies of the dataset you want to include
+        with random augmentations
+    """
     start = time.perf_counter()
     shroom_dataset = MushroomDataset(data_list, num_augmentations=num_augmentations)
     print(f"Dataset creation time: {time.perf_counter()-start}")
@@ -78,10 +107,20 @@ def make_dataloader(data_list, num_augmentations=0, num_workers=1):
     return data_loader
 
 
-def create_data_lists(base_dir):
+def create_data_lists(base_dir, random_state):
+    """
+    Loads images, encodes labels, shuffles the data, and splits it
+
+    Returns:
+        - train_data
+        - val_data
+        - test_data
+        - labels (the labels in the order they were encoded)
+    """
     images = load_images(base_dir=base_dir)
     images, labels = encode_labels(images=images)
+    random.seed(random_state)
     random.shuffle(images)
 
-    train_data, val_data, test_data = split_data(images)
+    train_data, val_data, test_data = split_data(images, random_state)
     return train_data, val_data, test_data, labels

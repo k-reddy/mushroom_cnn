@@ -9,6 +9,11 @@ from utils import make_dataloader
 
 
 class MushroomTrainer:
+    """
+    Trainer for the mushroom classification CNN
+    Trains, saves, and runs the model
+    """
+
     def __init__(
         self,
         model,
@@ -34,7 +39,7 @@ class MushroomTrainer:
         # self.optimizer = Adam(self.model.parameters(), lr=0.005, weight_decay=1e-4)
         # self.learning_rate_scheduler = ReduceLROnPlateau(
         #     self.optimizer,
-        #     mode="min",  # Reduce LR when monitored value stops decreasing
+        #     mode="min",
         #     factor=0.7,
         #     patience=3,
         #     verbose=True,
@@ -44,6 +49,16 @@ class MushroomTrainer:
         self.save_dir = None
 
     def train_model(self):
+        """
+        Trains model, returns:
+            epoch_train_losses
+            epoch_val_losses
+            epoch_val_accuracies: for each epoch, % of validation samples
+                where model correctly predicted the class
+            epoch_val_top3_accuracies: for each epoch, % of validation samples
+                where correct class was in the top 3 most likely classes
+                according to the model
+        """
         start_time = time.perf_counter()
         epoch_train_losses = []
         epoch_val_losses = []
@@ -51,6 +66,7 @@ class MushroomTrainer:
         epoch_val_top3_accuracies = []
         for epoch in range(self.num_epochs):
             # make a new training dataloader with diff augmentations each epoch
+            # importantly, each epoch still also trains on the base dataset
             self.train_dataloader = make_dataloader(
                 self.train_data,
                 num_augmentations=2,
@@ -58,13 +74,13 @@ class MushroomTrainer:
             )
             epoch_start = time.perf_counter()
 
-            # train
+            # train model
             train_start = time.perf_counter()
             train_loss = self.train_epoch()
             train_time = time.perf_counter() - train_start
             epoch_train_losses.append(train_loss)
 
-            # validate
+            # validate model
             val_start = time.perf_counter()
             val_loss, val_accuracy, val_top3_accuracy = self.run_model(
                 self.val_dataloader
@@ -97,6 +113,8 @@ class MushroomTrainer:
             epoch_time = time.perf_counter() - epoch_start
             print(f"Epoch completed in {epoch_time:.2f}s (Save: {save_time:.2f}s)")
             print("-" * 60)
+
+        # print some training summary stats
         print(f"total training time: {(time.perf_counter()-start_time)//60}m")
         for i, train_loss in enumerate(epoch_train_losses):
             print(
@@ -201,7 +219,7 @@ class MushroomTrainer:
         epoch_val_accuracies,
         epoch_val_top3_accuracies,
     ):
-        # if we haven't yet assigned it a save path
+        # if we haven't yet assigned it a save path, find one
         if not self.save_dir:
             base_path = "models/"
             os.makedirs(base_path, exist_ok=True)
@@ -210,6 +228,8 @@ class MushroomTrainer:
                 i += 1
             self.save_dir = os.path.join(base_path, f"model_{i}")
             os.makedirs(self.save_dir, exist_ok=True)
+
+        # make the path for this epoch
         model_dir = os.path.join(self.save_dir, f"epoch_{epoch}.pth")
         print(f"saving model checkpoint at {model_dir}")
         checkpoint = {
@@ -232,6 +252,10 @@ class MushroomTrainer:
 
         # Load model state
         self.model.load_state_dict(checkpoint["model_state_dict"])
+
+        # check that the seed we're using now is the original seed for splitting
+        # train, test, val data
+        # if not, will cause data leakage
         if checkpoint["seed"] != seed:
             raise ValueError(
                 f"WARNING: different seed used in generating and splitting training data. Try again with correct seed: {checkpoint['seed']}"
