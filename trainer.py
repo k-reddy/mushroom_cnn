@@ -4,7 +4,6 @@ import torch.nn as nn
 from torch.optim import Adam, SGD
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 import time
-import gc
 from utils import make_dataloader
 
 
@@ -35,8 +34,8 @@ class MushroomTrainer:
         self.num_epochs = num_epochs
 
         self.loss_fn = nn.CrossEntropyLoss()
-        self.optimizer = SGD(self.model.parameters(), lr=0.1, momentum=0.9)
-        # self.optimizer = Adam(self.model.parameters(), lr=0.005, weight_decay=1e-4)
+        # self.optimizer = SGD(self.model.parameters(), lr=0.01, momentum=0.9)
+        self.optimizer = Adam(self.model.parameters(), lr=0.005, weight_decay=1e-4)
         # self.learning_rate_scheduler = ReduceLROnPlateau(
         #     self.optimizer,
         #     mode="min",
@@ -45,7 +44,7 @@ class MushroomTrainer:
         #     verbose=True,
         #     min_lr=1e-6,
         # )
-        self.learning_rate_scheduler = StepLR(self.optimizer, step_size=5, gamma=0.1)
+        self.learning_rate_scheduler = StepLR(self.optimizer, step_size=2, gamma=0.7)
         self.save_dir = None
 
     def train_model(self):
@@ -60,21 +59,19 @@ class MushroomTrainer:
                 according to the model
         """
         start_time = time.perf_counter()
+        self.model.train()
         epoch_train_losses = []
         epoch_val_losses = []
         epoch_val_accuracies = []
         epoch_val_top3_accuracies = []
         for epoch in range(self.num_epochs):
+            epoch_start = time.perf_counter()
+
             # make a new training dataloader with diff augmentations each epoch
             # importantly, each epoch still also trains on the base dataset
             self.train_dataloader = make_dataloader(
-                self.train_data,
-                num_augmentations=2,
-                num_workers=2,
+                self.train_data, num_augmentations=2, num_workers=2
             )
-            epoch_start = time.perf_counter()
-
-            # train model
             train_start = time.perf_counter()
             train_loss = self.train_epoch()
             train_time = time.perf_counter() - train_start
@@ -134,12 +131,8 @@ class MushroomTrainer:
         forward_time = 0
         backward_time = 0
 
-        data_start = time.perf_counter()
+        batch_start = time.perf_counter()
         for batch_idx, (inputs, targets) in enumerate(self.train_dataloader):
-            data_time = time.perf_counter() - data_start
-            total_data_time += data_time
-
-            batch_start = time.perf_counter()
             batch_train_loss, forward_time, backward_time = self.train_batch(
                 inputs, targets
             )
@@ -151,13 +144,8 @@ class MushroomTrainer:
                 print(
                     f"Batch {batch_idx}: Loss={batch_train_loss:.4f}, Time={batch_time:.3f}s"
                 )
-                print(f"  Data loading: {data_time:.3f}s")
                 print(f"  Forward: {forward_time:.3f}s, Backward: {backward_time:.3f}s")
-
-            # memory cleanup
-            del inputs, targets
-            gc.collect()
-            data_start = time.perf_counter()  # Start timing next data load
+            batch_start = time.perf_counter()
 
         avg_epoch_train_loss = epoch_train_loss / len(self.train_dataloader)
         print(f"Average batch time: {total_batch_time/len(self.train_dataloader):.3f}s")

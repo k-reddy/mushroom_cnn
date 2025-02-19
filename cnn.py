@@ -113,43 +113,26 @@ class BottleneckResBlock(nn.Module):
 
 
 class MushroomClassifier(nn.Module):
-    """
-    Defines a CNN used to classify mushrooms
-    The forward pass flattens the max and average pool layers and concatenates
-        them before feeding them into the fully connected layer
-    """
-
     def __init__(self, num_classes):
         super().__init__()
 
         self.initial = nn.Sequential(
-            ConvBlock(3, 16, stride=1),
-            ConvBlock(16, 32, stride=1),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+            ConvBlock(3, 32, stride=1), ConvBlock(32, 32, stride=2)
         )
 
-        self.block1 = nn.Sequential(
-            BottleneckResBlock(32, 64), nn.MaxPool2d(kernel_size=2, stride=2)
-        )
-
-        self.block2 = nn.Sequential(
-            BottleneckResBlock(64, 128), nn.MaxPool2d(kernel_size=2, stride=2)
-        )
+        self.block1 = ResBlock(32, 64, stride=2)
+        self.block2 = ResBlock(64, 128, stride=2, dilation=2)
         self.dropout1 = nn.Dropout(0.2)
-        self.block3 = self.block2 = nn.Sequential(
-            BottleneckResBlock(128, 256, dilation=2),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-        )
+        self.block3 = ResBlock(128, 256, stride=2)
         self.dropout2 = nn.Dropout(0.2)
 
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.max_pool = nn.AdaptiveMaxPool2d(1)
         self.dropout3 = nn.Dropout(0.2)
         self.fc = nn.Linear(256 * 2, num_classes)
-        n_parameters = sum(p.numel() for p in self.parameters())
-        print(f"Created a model with {n_parameters} parameters")
 
     def forward(self, x):
+        # Store intermediate results to avoid in-place operations
         out = self.initial(x)
         out = self.block1(out)
         out = self.block2(out)

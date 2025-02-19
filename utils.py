@@ -30,6 +30,8 @@ def load_images(base_dir, rgb_only=True):
                     images.append({"genus": genus_folder, "image": img_copy})
             except Exception as e:
                 print(f"Skipping corrupted image {image_path}: {str(e)}")
+            # if len(images) == 10:
+            #     return images
 
     if rgb_only:
         images = [data for data in images if data["image"].mode == "RGB"]
