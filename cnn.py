@@ -15,11 +15,9 @@ class ConvBlock(nn.Module):
             bias=False,
         )
         self.bn = nn.BatchNorm2d(out_channels)
-        # Remove inplace operation from ReLU
         self.relu = nn.ReLU(inplace=False)
 
     def forward(self, x):
-        # Store intermediate results to avoid in-place operations
         out = self.conv(x)
         out = self.bn(out)
         out = self.relu(out)
@@ -43,20 +41,24 @@ class ResBlock(nn.Module):
                 nn.BatchNorm2d(out_channels),
             )
 
-        # Remove inplace operation from ReLU
         self.relu = nn.ReLU(inplace=False)
 
     def forward(self, x):
-        # Store intermediate results to avoid in-place operations
         residual = self.shortcut(x)
         out = self.conv1(x)
         out = self.conv2(out)
-        out = out + residual  # Changed from += to +
+        out = out + residual
         out = self.relu(out)
         return out
 
 
 class MushroomClassifier(nn.Module):
+    """
+    Defines a CNN used to classify mushrooms
+    The forward pass flattens the max and average pool layers and concatenates
+        them before feeding them into the fully connected layer
+    """
+
     def __init__(self, num_classes):
         super().__init__()
 
@@ -78,7 +80,6 @@ class MushroomClassifier(nn.Module):
         print(f"Created a model with {n_parameters} parameters")
 
     def forward(self, x):
-        # Store intermediate results to avoid in-place operations
         out = self.initial(x)
         out = self.block1(out)
         out = self.block2(out)
