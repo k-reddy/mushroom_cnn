@@ -116,9 +116,7 @@ class MushroomClassifier(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
 
-        self.initial = nn.Sequential(
-            ConvBlock(3, 32, stride=1), ConvBlock(32, 32, stride=2)
-        )
+        self.initial = nn.Sequential(ConvBlock(3, 32, stride=1), ConvBlock(32, 32))
 
         self.block1 = ResBlock(32, 64, stride=2)
         self.block2 = ResBlock(64, 128, stride=2, dilation=2)
@@ -128,8 +126,9 @@ class MushroomClassifier(nn.Module):
 
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.max_pool = nn.AdaptiveMaxPool2d(1)
+        self.fc_1 = nn.Linear(256 * 2, 96)
         self.dropout3 = nn.Dropout(0.2)
-        self.fc = nn.Linear(256 * 2, num_classes)
+        self.fc_2 = nn.Linear(96, num_classes)
         n_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
         print(f"created model with {n_params} parameters")
 
@@ -146,7 +145,8 @@ class MushroomClassifier(nn.Module):
         max_pooled = torch.flatten(max_pooled, 1)
         avg_pooled = torch.flatten(avg_pooled, 1)
         out = torch.cat([max_pooled, avg_pooled], dim=1)
+        out = self.fc_1(out)
         out = self.dropout3(out)
-        out = self.fc(out)
+        out = self.fc_2(out)
 
         return out

@@ -34,7 +34,7 @@ class MushroomTrainer:
         self.num_epochs = num_epochs
 
         self.loss_fn = nn.CrossEntropyLoss()
-        # self.optimizer = SGD(self.model.parameters(), lr=0.01, momentum=0.9)
+        # self.optimizer = SGD(self.model.parameters(), lr=0.005, momentum=0.9)
         self.optimizer = Adam(self.model.parameters(), lr=0.005, weight_decay=1e-4)
         # self.learning_rate_scheduler = ReduceLROnPlateau(
         #     self.optimizer,
@@ -127,7 +127,6 @@ class MushroomTrainer:
     def train_epoch(self):
         epoch_train_loss = 0
         total_batch_time = 0
-        total_data_time = 0
         forward_time = 0
         backward_time = 0
 
@@ -149,9 +148,6 @@ class MushroomTrainer:
 
         avg_epoch_train_loss = epoch_train_loss / len(self.train_dataloader)
         print(f"Average batch time: {total_batch_time/len(self.train_dataloader):.3f}s")
-        print(
-            f"Average data loading time: {total_data_time/len(self.train_dataloader):.3f}s"
-        )
         return avg_epoch_train_loss
 
     def train_batch(self, inputs, targets):
