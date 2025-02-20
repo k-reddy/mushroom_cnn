@@ -1,4 +1,15 @@
 # Classifying Mushroom Images by Genus
+
+## Files & Running the Code
+To run the code, you can use run_model.py. This file trains and saves the model. You will need to un-comment the lines that download the kaggle data for your first run and comment out the provided base_dir. 
+
+If you want to run the model on the training data and examine the outputs, use the bottom of data_exploration.ipynb, or use the trainer.run_model() function, depending on what kind of outputs you need. 
+
+The other files are:
+- cnn.py: this specifies the architecture for the CNN (a MushroomClassifier object)
+- trainer.py: defines a MushroomTrainer object that can be used to train and run the model 
+- utils.py: has some data cleaning utils
+
 ## Problem Description & Goal
 My goal is to classify mushroom images by genus because I'm trying to get into mushroom foraging and I thought it'd be fun! I used a [dataset from Kaggle](https://www.kaggle.com/datasets/maysee/mushrooms-classification-common-genuss-images) that has mushroom images from 9 different genera. 
 
@@ -29,25 +40,17 @@ By this point, the model was learning the training dataset well but was now over
 - Added new augmentations each epoch rather than reusing the same data
 - Added dropout layers
 
-That got the model to not overfit. To further improve performance, I:
-- Switched my optimizer to SGD, which tends to have better performance than Adam on CNN tasks (whereas Adam tends to converge faster) - since the model was plateauing before the end of training, the slower convergance and better performance was a good tradeoff 
-- Looked through the data manually. Upon examining a confusion matrix and looking through common confusions, one hypothesis is that the model is missing out on fine-grained data. (The main things it messed up up were mushrooms that differed primarily texturally but otherwise looked similar.) To address that, I increased the image size (originally made it small since I'm running things locally), reduced the stride in early layers, and pushed the dilation to later layers.
+That got the model to not overfit. To find further areas of potential performance improvement, I looked through the data manually. Upon examining a confusion matrix and looking through common confusions, one hypothesis is that the model is missing out on fine-grained data. (The main things it messed up up were mushrooms that differed primarily texturally but otherwise looked similar.) To address that, I tried:
+- Increasing the image size (small performance gains, large time increase - bad tradeoff)
+- Used the original image size but switched the stride from 2 to 1 in the 2nd conv layer (significant performance gains, particularly in top 3 accuracy)
+- Tried switching optimizer to SGD (tends to have better performance than Adam on CNN tasks while converging more slowly), switched one Res Block to a Bottleneck Res Block (for parameter efficiency) and added a 2nd fully connected layer at the end - unclear impact
+
+Of these, the second option was the strongest model.
 
 ## Ideas to Further Improve Accuracy
-First, I would examine the loss curves to determine the area of improvement: are we plateauing on training data, overfitting, converging slowly, etc.? 
-
 Based on what I've seen so far, some ideas for improvement include:
 - Not reusing the original training data after the 1st epoch (use new augmentations only for all successive epochs)—this would help with overfitting 
 - Automated hyperparameter optimization for key architecture and training parameters—like I did in the [circle detection project](https://github.com/k-reddy/circle_detection)
-- Weight the loss function based on classes - this would help if less common classes seem to be doing worse
-- Adding extra augmented data of rare classes to equalize the number of samples for each class - this would address the same problem 
-
-## Files & Running the Code
-To run the code, you can use run_model.py. This file trains and saves the model. You will need to un-comment the lines that download the kaggle data for your first run and comment out the provided base_dir. 
-
-If you want to run the model on the training data and examine the outputs, use the bottom of data_exploration.ipynb, or use the trainer.run_model() function, depending on what kind of outputs you need. 
-
-The other files are:
-- cnn.py: this specifies the architecture for the CNN (a MushroomClassifier object)
-- trainer.py: defines a MushroomTrainer object that can be used to train and run the model 
-- utils.py: has some data cleaning utils
+- Adding extra augmented data of rare classes to equalize the number of samples for each class - this would help the model perform better on rare classes 
+- Try SGD on the latest model
+- Try removing more strides while substituting some Res Blocks for Bottleneck Res Blocks (to make computations more efficient)
